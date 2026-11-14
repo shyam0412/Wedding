@@ -342,9 +342,9 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-ev
 #cd2{top:max(calc(env(safe-area-inset-top,0px) + 64px),8.5%)}
 .cdw p{margin:0}
 .cdk,.cdt,.cdmsg{opacity:0;transform:translateY(16px) scale(.96);filter:blur(6px);
-  transition:opacity .9s ease,transform 1s cubic-bezier(.2,.9,.2,1),filter .9s ease;will-change:transform,opacity}
+  transition:opacity .55s ease,transform .65s cubic-bezier(.2,.9,.2,1),filter .55s ease;will-change:transform,opacity}
 .cdw.on .cdk,.cdw.on .cdt,.cdw.on .cdmsg{opacity:1;transform:none;filter:none}
-.cdw.on .cdt:nth-child(1){transition-delay:.1s}.cdw.on .cdt:nth-child(2){transition-delay:.19s}.cdw.on .cdt:nth-child(3){transition-delay:.28s}.cdw.on .cdt:nth-child(4){transition-delay:.37s}
+.cdw.on .cdt:nth-child(1){transition-delay:.04s}.cdw.on .cdt:nth-child(2){transition-delay:.09s}.cdw.on .cdt:nth-child(3){transition-delay:.14s}.cdw.on .cdt:nth-child(4){transition-delay:.19s}
 .cdk{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 0 clamp(8px,2.6cqw,12px)!important;white-space:nowrap;
   font-family:'Cinzel','Marcellus',serif;font-weight:600;font-size:11px;font-size:clamp(9.5px,2.9cqw,12.5px);letter-spacing:.26em;text-transform:uppercase;color:#f8e9c4;
   text-shadow:0 0 1px rgba(0,0,0,.9),0 1px 3px rgba(0,0,0,.85),0 0 12px rgba(0,0,0,.7)}
@@ -364,8 +364,8 @@ canvas{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-ev
 .cdn{position:relative;display:block;font-family:'Cinzel','Marcellus',Georgia,serif;font-weight:600;font-size:28px;font-size:clamp(24px,7.6cqw,35px);line-height:1;
   font-variant-numeric:lining-nums tabular-nums;letter-spacing:.02em;
   color:#fbe6b0;-webkit-text-fill-color:#fbe6b0;
-  text-shadow:0 1px 0 rgba(255,250,234,.35),0 1px 2px rgba(0,0,0,.7),0 0 14px rgba(255,205,120,.35);
-  -webkit-backface-visibility:hidden;backface-visibility:hidden}
+  text-shadow:0 1px 0 rgba(255,250,234,.35),0 1px 2px rgba(0,0,0,.7),0 0 14px rgba(255,205,120,.35);transition:text-shadow .5s ease,color .5s ease}
+.cdn.tk{color:#fff6dc;-webkit-text-fill-color:#fff6dc;transition:none;text-shadow:0 1px 0 rgba(255,250,234,.5),0 1px 2px rgba(0,0,0,.7),0 0 18px rgba(255,214,140,.95)}
 .cdl{position:relative;display:block;margin-top:6px;font-family:'Cinzel','Marcellus',serif;font-weight:600;font-size:8.5px;font-size:clamp(7.5px,2.25cqw,10px);
   letter-spacing:.2em;padding-left:.2em;text-transform:uppercase;color:#f6e6c0;text-shadow:0 1px 3px rgba(0,0,0,.8)}
 .cdmsg{display:none;font-family:'Great Vibes','Pinyon Script',cursive;font-size:34px;font-size:clamp(30px,9.6cqw,46px);line-height:1.2;color:#fff3d6;white-space:nowrap;
@@ -1043,19 +1043,27 @@ stage.addEventListener('pointermove',e=>{
   if(p.down&&!p.mode){const dx=q.x-p.x0,dy=q.y-p.y0;
     if(Math.abs(dy)>14&&Math.abs(dy)>Math.abs(dx)*1.25){p.mode='scroll';p.sp0=U;p.yS=q.y;dragScroll=true;}
     else if(Math.abs(dx)>14)p.mode='brush';}
-  if(p.mode==='scroll'){UT=clamp(p.sp0-(q.y-p.yS)/(H*2.4),0,6);idleScroll=0;}
+  if(p.mode==='scroll'){const b=Math.round(p.sp0);UT=clamp(clamp(p.sp0-(q.y-p.yS)/(H*.85),b-1,b+1),0,6);idleScroll=0;}
   if(p.mouse)p.alive=true;
 });
 function release(e){const p=getPtr(e,false);if(!p)return;
-  if(p.mode==='scroll'){dragScroll=false;UT=clamp(UT-p.vy/(H*2.4)*.4,0,6);idleScroll=0;}
+  if(p.mode==='scroll'){dragScroll=false;const b=Math.round(p.sp0),d=UT-b;let t=b;if(Math.abs(p.vy)>300)t=b+(p.vy<0?1:-1);else if(Math.abs(d)>.08)t=b+(d>0?1:-1);UT=clamp(t,0,6);idleScroll=0;try{hideHint();}catch(_){}}
   p.mode=null;p.down=false;p.hold=false;if(!p.mouse)p.alive=false;}
 stage.addEventListener('pointerup',release);
 stage.addEventListener('pointercancel',release);
 stage.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse')ptrs.delete('mouse');});
+/* a wheel notch or a trackpad flick moves exactly one page; the trackpad's coasting is ignored until it stops */
+let wAcc=0,wLock=false,wStepAt=0,wLast=0,wPrevA=0,wPrevS=0;
+function wheelPage(dy){const now=performance.now(),gap=now-wLast,ab=Math.abs(dy),sg=Math.sign(dy);wLast=now;
+  /* trackpad coasting = same direction, each movement smaller than the last: never a new page */
+  const coasting=gap<1000&&sg===wPrevS&&ab<wPrevA*.98;wPrevA=ab;wPrevS=sg;
+  if(wLock){if(!coasting&&now-wStepAt>450)wLock=false;else return;}
+  if(gap>600)wAcc=0;wAcc+=dy;
+  if(Math.abs(wAcc)>=30){UT=clamp(Math.round(UT)+(wAcc>0?1:-1),0,6);wAcc=0;wLock=true;wStepAt=now;}}
 stage.addEventListener('wheel',e=>{e.preventDefault();ensureAudio();
-  const dy=e.deltaMode===1?e.deltaY*30:e.deltaY;UT=clamp(UT+clamp(dy,-80,80)*.00032,0,6);idleScroll=0;
+  const dy=e.deltaMode===1?e.deltaY*30:e.deltaY;wheelPage(dy);idleScroll=0;
   if(SP<.5){gust=Math.min(1,gust+Math.min(.2,Math.abs(dy)*.001));gustSnd=1;}hideHint();},{passive:false});
-document.addEventListener('keydown',e=>{if(['ArrowDown','PageDown',' '].includes(e.key)){UT=clamp(UT+.12,0,6);idleScroll=0;}if(['ArrowUp','PageUp'].includes(e.key)){UT=clamp(UT-.12,0,6);idleScroll=0;}});
+document.addEventListener('keydown',e=>{if(['ArrowDown','PageDown',' '].includes(e.key)){UT=clamp(Math.round(UT)+1,0,6);idleScroll=0;}if(['ArrowUp','PageUp'].includes(e.key)){UT=clamp(Math.round(UT)-1,0,6);idleScroll=0;}});
 stage.addEventListener('contextmenu',e=>e.preventDefault());
 document.addEventListener('gesturestart',e=>e.preventDefault());
 
@@ -1284,7 +1292,7 @@ function frame(now){
   requestAnimationFrame(frame);if(!ready)return;
   let dt=(now-last)/1000;last=now;if(!(dt>0))return;if(dt>.05)dt=.05;
   T+=dt;frameEMA=lerp(frameEMA,dt,.05);frameCount++;
-  if(frameCount===150&&frameEMA>.027&&dprCap>1.25){dprCap=Math.max(1.25,dprCap-.5);resize();}
+  if(frameCount>=150&&frameCount%120===30&&frameEMA>.024&&dprCap>1){dprCap=Math.max(1,dprCap-.25);resize();}
   stepScroll(dt);cdStep();
   const fade=smooth(0,3.2,T);
   if(SP<.97){update(dt);if(useGL)drawGL(fade);else if(flatDraw&&frameCount%30===0)flatDraw();drawFx(fade);drawFg(fade);drawTop();}
@@ -1913,7 +1921,7 @@ function stepScroll(dt){
   idleScroll+=dt;
   /* if you stop part-way, the walk finishes on its own, gently */
   {const fr=UT-Math.floor(UT);if(!dragScroll&&idleScroll>1.4&&fr>.02&&fr<.98)UT=clamp(UT+(fr>=.5?1:-1)*.1*dt,0,6);}
-  U=lerp(U,UT,Math.min(1,dt*(dragScroll?5:1.8)));
+  {const n=performance.now(),sd=Math.min(.25,Math.max(0,(n-(stepScroll.t||n))/1000));stepScroll.t=n;U=lerp(U,UT,1-Math.exp(-sd*(dragScroll?18:3.6)));}
   if(Math.abs(U-UT)<.0005)U=UT;
   /* the Baraat is inserted between the swing (2) and the lake: the scenes after it simply start one step later */
   SP=U<=2?U:(U<=3?2:U-1);SPt=SP;
@@ -2578,6 +2586,7 @@ function stepBaraat(){
   burstB.style.opacity=(.65*Math.sin(Math.PI*smooth(.18,.92,eIn))).toFixed(3);
 }
 
+window.__story=()=>({U:U,UT:UT});
 /* ============================================================ countdown to the wedding */
 /* Saturday 21 November 2026, 4:00 PM India time, when the Baraat sets out. Stored as one fixed instant, so every phone counts to the same moment. */
 const WED=Date.UTC(2026,10,21,10,30,0);
@@ -2599,7 +2608,7 @@ function cdTick(){
       for(let i=0;i<4;i++){
         if(c.v[i]===v[i])continue;
         const first=c.v[i]===undefined,el=c.n[i];c.v[i]=v[i];el.textContent=(v[i]<10?'0':'')+v[i];c.l[i].textContent=CDL[i][v[i]===1?0:1];
-        if(!first&&!REDUCED&&el.animate&&!document.hidden)el.animate([{transform:'translate3d(0,-26%,0) scale(1.12)'},{transform:'translate3d(0,0,0) scale(1)'}],{duration:380,easing:'cubic-bezier(.2,.9,.2,1)'});
+        if(!first&&!REDUCED&&!document.hidden){el.classList.add('tk');setTimeout(()=>el.classList.remove('tk'),180);}
         if(i<3)c.w.setAttribute('aria-label',v[0]+' days, '+v[1]+' hours and '+v[2]+' minutes until the wedding');
       }
     }
@@ -2611,7 +2620,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)cdTick();}
 window.addEventListener('pageshow',cdTick);
 /* on the cover it arrives after the names; on the last page it rises into the night sky with the fireworks */
 function cdStep(){
-  const a=T>4.8&&U<.1,b=U>5.72;
+  const a=T>4.8&&U<.1,b=U>5.4;
   if(a!==cdOn1){cdOn1=a;cd1.classList.toggle('on',a);}
   if(b!==cdOn2){cdOn2=b;cd2.classList.toggle('on',b);}
 }
