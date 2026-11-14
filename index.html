@@ -559,15 +559,41 @@ let AC=null,master=null,ambOut=null,windG=null,windF=null,muted=false,ambientOn=
 const NOTES=[392,440,493.88,587.33,659.25,783.99,880,987.77];
 function ensureAudio(){
   try{
-    if(AC){if(AC.state==='suspended')AC.resume();startAmbient();return;}
+    if(AC){wakeAudio();return;}
     const Ctor=window.AudioContext||window.webkitAudioContext;if(!Ctor)return;
     AC=new Ctor();master=AC.createGain();master.gain.value=.55;master.connect(AC.destination);
     const d=AC.createDelay();d.delayTime.value=.3;const fb=AC.createGain();fb.gain.value=.38;const wet=AC.createGain();wet.gain.value=.42;
     d.connect(fb);fb.connect(d);d.connect(wet);wet.connect(AC.destination);master.connect(d);
     ambOut=AC.createGain();ambOut.gain.value=muted?0:AMB_VOL;ambOut.connect(AC.destination);
-    songOut=AC.createGain();songOut.gain.value=muted?0:SONG_VOL;songOut.connect(AC.destination);loadSong();startAmbient();
+    songOut=AC.createGain();songOut.gain.value=muted?0:SONG_VOL;songOut.connect(AC.destination);loadSong();wakeAudio();
   }catch(e){AC=null;}
 }
+const IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+const SILENT_SRC='data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEwMAAAAAAAAAAAAAAA//NwwAAAAAAAAAAAAEluZm8AAAAPAAAAGQAACuoAGhoaIyMjIy0tLS02NjY2QEBAQEpKSkpTU1NTXV1dXWZmZmZwcHBweXl5eYODg4ONjY2NlpaWlqCgoKCpqamps7Ozs729vb3GxsbG0NDQ0NnZ2dnj4+Pj7Ozs7Pb29vb/////AAAAAExhdmM2MC4zMQAAAAAAAAAAAAAAACQCUgAAAAAAAArqJwTg6QAAAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NCxKMAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NAxKQAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/80LEowAAA0gAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/80DEpAAAA0gAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsSjAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NCxKMAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NAxKQAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/80LEowAAA0gAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/80DEpAAAA0gAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsSjAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NCxKMAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NAxKQAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/80LEowAAA0gAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/80DEpAAAA0gAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsSjAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NCxKMAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NAxKQAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVMQU1FMy4xMDBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/80LEowAAA0gAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/80DEpAAAA0gAAAAAVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==';
+let silentEl=null;
+/* iPhones mute Web Audio when the ring/silent switch is on silent. Asking for a "playback" audio session (iOS 16.4+), or on older
+   iOS keeping a silent media track playing, moves the page into the same audio category as videos, so the song is heard. */
+function iosPlayback(){
+  try{if(navigator.audioSession&&navigator.audioSession.type!=='playback'){navigator.audioSession.type='playback';return;}}catch(e){}
+  if(!IOS||(navigator.audioSession&&navigator.audioSession.type==='playback'))return;
+  try{
+    if(!silentEl){silentEl=document.createElement('audio');silentEl.src=SILENT_SRC;silentEl.loop=true;silentEl.preload='auto';
+      silentEl.setAttribute('playsinline','');silentEl.setAttribute('x-webkit-airplay','deny');silentEl.disableRemotePlayback=true;}
+    if(silentEl.paused){const p=silentEl.play();if(p&&p.catch)p.catch(()=>{});}
+  }catch(e){}
+}
+/* called from every tap, click and key press: (re)starts sound whenever the phone allows it */
+function wakeAudio(){
+  if(!AC||document.hidden)return;
+  iosPlayback();
+  const go=()=>{startAmbient();songStep();};
+  if(AC.state==='running'){go();return;}
+  try{const p=AC.resume();if(p&&p.then)p.then(go,()=>{});else setTimeout(go,60);}catch(e){}
+}
+['touchend','pointerup','click','keydown'].forEach(t=>document.addEventListener(t,e=>{
+  if(e.target&&e.target.closest&&e.target.closest('#snd'))return;
+  if(!AC)ensureAudio();else if(AC.state!=='running'||(silentEl&&silentEl.paused&&!muted))wakeAudio();
+},{capture:true,passive:true}));
 function loadSong(){
   try{
     const bin=atob(SONG_SRC),u8=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u8[i]=bin.charCodeAt(i);
@@ -591,8 +617,8 @@ function songStep(){
     songNext+=dur-xf;
   }
 }
-document.addEventListener('visibilitychange',()=>{try{if(!AC)return;if(document.hidden)AC.suspend();else AC.resume();}catch(e){}});
-function startAmbient(){
+document.addEventListener('visibilitychange',()=>{try{if(!AC)return;if(document.hidden){AC.suspend();if(silentEl)silentEl.pause();}else wakeAudio();}catch(e){}});
+function startAmbient(){return;/* only the song plays */
   if(!AC||ambientOn||AC.state!=='running')return;ambientOn=true;
   try{
     const len=AC.sampleRate*4,buf=AC.createBuffer(1,len,AC.sampleRate),dt=buf.getChannelData(0);let l=0;
@@ -605,7 +631,7 @@ function startAmbient(){
     const birds=()=>{setTimeout(()=>{if(AC&&!muted)chirp();birds();},rnd(5500,13000));};birds();
   }catch(e){}
 }
-function chirp(){
+function chirp(){return;/* only the song plays */
   if(!AC||AC.state!=='running')return;
   const n=2+Math.floor(Math.random()*3),f0=rnd(2300,3600),t0=AC.currentTime+.05;
   for(let i=0;i<n;i++){
@@ -615,7 +641,7 @@ function chirp(){
     o.connect(g);g.connect(ambOut);o.start(t);o.stop(t+.1);
   }
 }
-function chime(i,vol){
+function chime(i,vol){return;/* only the song plays */
   if(!AC||muted||AC.state!=='running')return;
   try{
     const f=NOTES[((i%NOTES.length)+NOTES.length)%NOTES.length],t=AC.currentTime,v=(vol||1)*.05;
@@ -2373,7 +2399,7 @@ function fwBurst(r){
 }
 function hslRgb(h){const f=n=>{const k=(n+h/30)%12;return .5-.5*Math.max(-1,Math.min(k-3,9-k,1));};return [f(0),f(8),f(4)];}
 /* sound: a low thump, a crackle of tiny pops, and the whoosh of the rocket */
-function boom(v,kind){
+function boom(v,kind){return;/* only the song plays */
   if(!AC||muted||AC.state!=='running')return;
   try{
     const t=AC.currentTime+(kind==='boom'?.12:0),len=kind==='whoosh'?.9:kind==='crackle'?1.4:1.2;
@@ -2510,7 +2536,7 @@ function baraatDown(p){
   dhol(1);beat=1;buzz([18,60,18]);p.hit=true;
 }
 /* the dhol: a deep 'dha' and a sharp 'tin' */
-function dhol(v){
+function dhol(v){return;/* only the song plays */
   if(!AC||muted||AC.state!=='running')return;
   try{const t=AC.currentTime;
     [[0,95,.55,.35],[.16,180,.35,.18],[.28,95,.5,.3]].forEach(([d,f,g,len])=>{
